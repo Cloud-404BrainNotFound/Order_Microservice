@@ -22,13 +22,14 @@ class StringingOrderCreate(BaseModel):
 
 # Pydantic model for updating an order's info
 class StringingOrderUpdate(BaseModel):
-    sport: Optional[str]
-    racket_model: Optional[str]
-    string: Optional[str]
-    tension: Optional[str]
-    pickup_date: Optional[datetime]
+    sport: Optional[str] = None
+    racket_model: Optional[str] = None
+    string: Optional[str] = None
+    tension: Optional[str] = None
+    pickup_date: Optional[datetime] = None
     notes: Optional[str] = Field(default="", max_length=1000)
-    price: Optional[float]
+    price: Optional[float] = None
+
 
 # Pydantic model for updating an order's status
 class OrderUpdateStatus(BaseModel):
@@ -240,7 +241,7 @@ def update_order_background(order_id: str, db: Session):
         order.updated_at = datetime.utcnow()
         db.commit()
 
-@order_router.post("/order_async_update", status_code=202)
+@order_router.post("/order_async_update/{order_id}", status_code=202)
 def async_update_order(order_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(StringingOrder).filter(StringingOrder.id == order_id).first()
     if not order:
