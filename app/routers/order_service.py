@@ -2,22 +2,20 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from datetime import datetime
-from app.models.order import StringingOrder
-from pydantic import BaseModel
-from typing import Optional
 from app.models.order import StringingOrder, OrderStatus
-import uuid
+from pydantic import BaseModel, Field
+from typing import Optional
 from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 
-
+# Updated Pydantic model with validation for notes field
 class StringingOrderCreate(BaseModel):
     sport: str
     racket_model: str
     string: str
     tension: str
     pickup_date: datetime 
-    notes: Optional[str] = None  # Optional notes
+    notes: Optional[str] = Field(default="", max_length=1000)  # Limit notes to 1000 characters
     price: float
 
 order_router = APIRouter()
@@ -27,6 +25,7 @@ def create_stringing_order(
     order: StringingOrderCreate,
     db: Session = Depends(get_db),
 ):
+    # Create a new StringingOrder instance using validated Pydantic data
     new_order = StringingOrder(
         sport=order.sport,
         racket_model=order.racket_model,
@@ -130,10 +129,3 @@ def async_update_order(order_id: str, background_tasks: BackgroundTasks, db: Ses
     background_tasks.add_task(update_order_background, order_id, db)
     
     return {"message": "Order update in progress", "order_id": order_id}
-
-@order_router.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"message": exc.detail},
-    )
