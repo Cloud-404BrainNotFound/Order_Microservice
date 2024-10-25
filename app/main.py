@@ -5,10 +5,14 @@ from app.models import order
 from app.routers.order_service import order_router  # Import the order router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.config.log import setup_logger
+from app.dependecies.logging_middleware import logging_dependency
 
 order.Base.metadata.create_all(bind=engine)
+logger = setup_logger()
 
 app = FastAPI()
+app.middleware("http")(logging_dependency)
 
 app.add_middleware(
     CORSMiddleware,
