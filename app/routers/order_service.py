@@ -16,7 +16,7 @@ class StringingOrderCreate(BaseModel):
     racket_model: str
     string: str
     tension: str
-    pickup_date: datetime 
+    pickup_date: Optional[datetime] = None
     notes: Optional[str] = Field(default="", max_length=1000)  # Limit notes to 1000 characters
     price: float
 
