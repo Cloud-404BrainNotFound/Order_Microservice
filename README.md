@@ -6,6 +6,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 
 
+
+
 # Todo:
 - Currently, clicking "Proceed to Payment" directly creates the order.
 - The order should only be created after a successful payment to prevent users from going back to the previous page before completing the payment.
