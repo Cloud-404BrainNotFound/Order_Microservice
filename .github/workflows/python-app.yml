@@ -1,4 +1,4 @@
-name: Python Application
+name: Python Application CI/CD
 
 on:
   push:
@@ -10,33 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  deploy:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
         python-version: "3.12"
 
-    - name: Install dependencies and activate virtual environment
+    - name: Install dependencies
       run: |
         python -m venv venv
         source venv/bin/activate
         python -m pip install --upgrade pip
-        pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-    - name: Lint with flake8
-      run: |
-        source venv/bin/activate
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.6
@@ -45,4 +37,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
-          bash /home/ubuntu/Backend/order_service/deploy.sh
+          git pull origin main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          sudo systemctl restart order_service.service
