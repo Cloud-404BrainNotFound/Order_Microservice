@@ -1,6 +1,5 @@
 name: Python Application CI/CD
 
-
 on:
   push:
     branches: [ "main" ]
@@ -8,11 +7,10 @@ on:
     branches: [ "main" ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +22,6 @@ jobs:
       with:
         python-version: "3.12"
 
-    - name: Install dependencies
-      run: |
-        python -m venv venv
-        source venv/bin/activate
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.6
       with:
@@ -38,7 +29,11 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
+          cd /home/ubuntu/Order_Microservice
           git pull origin main
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
           source venv/bin/activate
           pip install -r requirements.txt
           sudo systemctl restart order_service.service
