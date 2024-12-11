@@ -37,3 +37,10 @@ class StringingOrderCreate(BaseModel):
     pickup_date: datetime
     notes: Optional[str] = Field(default="", max_length=1000)  # Validation on 'notes'
     price: float
+
+class UserOrder(Base):
+    __tablename__ = "user_orders"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, index=True)
+    order_id = Column(String(36), nullable=False, index=True)  # Remove ForeignKey
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.database import get_db
 from datetime import datetime, timezone
-from app.models.order import StringingOrder, OrderStatus
+from app.models.order import StringingOrder, OrderStatus, UserOrder
 from pydantic import BaseModel, Field
 from typing import Optional
 from fastapi import BackgroundTasks
@@ -262,3 +262,79 @@ def delete_order(order_id: str, db: Session = Depends(get_db)):
     db.delete(order)
     db.commit()
     return {"message": "Order deleted successfully"}
+
+@order_router.get("/orders/user/{user_id}")
+def get_user_orders(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    # Get order IDs for the user
+    user_orders = db.query(UserOrder).filter(UserOrder.user_id == user_id).all()
+    order_ids = [uo.order_id for uo in user_orders]
+    
+    # Get the actual orders
+    orders = (
+        db.query(StringingOrder)
+        .filter(StringingOrder.id.in_(order_ids))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    
+    return {
+        "orders": orders,
+        "total": len(orders)
+    }
+
+@order_router.post("/order_stringing/user/{user_id}", status_code=201)
+def create_user_stringing_order(
+    user_id: str,
+    order: StringingOrderCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        # Create new stringing order
+        new_order = StringingOrder(
+            sport=order.sport,
+            racket_model=order.racket_model,
+            string=order.string,
+            tension=order.tension,
+            pickup_date=order.pickup_date,
+            notes=order.notes or "",
+            price=order.price,
+            order_status=OrderStatus.STRUNG
+        )
+        
+        db.add(new_order)
+        db.flush()  # Flush to get the new_order.id
+        
+        # Create user-order relationship
+        user_order = UserOrder(
+            user_id=user_id,
+            order_id=new_order.id
+        )
+        
+        db.add(user_order)
+        db.commit()
+        db.refresh(new_order)
+        
+        headers = {"Location": f"/orders/{new_order.id}"}
+        return JSONResponse(
+            content={
+                "message": "Stringing order created successfully",
+                "order_id": new_order.id,
+                "user_id": user_id,
+                "order_status": new_order.order_status.value
+            },
+            headers=headers,
+            status_code=201
+        )
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred while creating the order.")
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
